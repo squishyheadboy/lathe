@@ -5,18 +5,25 @@
 use <bearings.scad>;
 use <pulleys.scad>;
 use <lathe_gears.scad>;
+use <screws.scad>;
 include <../MCAD/involute_gears.scad>
 
 guide_rad=2.5;
 guide_padding=3;
 m4_tap=3.2;
 
+// x direction is spindle axis
+// y direction is in/out towards the centre of the workpiece
+// z direction is up/down
+
 x_car_len=40;
 x_guide_sep=40;
 x_guide_len=80;
+x_travel_len=200;  // the length of the lathe bed over which the tooh head can move
 
 y_guide_sep=30;
-y_car_len=y_guide_sep+2*(guide_padding+guide_rad);
+y_car_len=y_guide_sep+2*(guide_padding+guide_rad);  // lenght of y carriage along x axis
+y_car_depth = x_guide_sep + 2*(guide_padding+guide_rad);
 y_guide_len=80;
 
 frame_thick=10;
@@ -30,21 +37,28 @@ spindle_y=-x_guide_sep/2;
 pulley_radius=10;
 hub_length=10;
 pulley_length=10;
+bed_y = 80;
+frame_separation=12; // Distance between frame supports at motor end
+bed_length = x_travel_len + 3*frame_thick + frame_separation;
+
+// hole locations for frame supports
+x_support_positions = [frame_thick/2,(frame_thick/2+frame_thick+frame_separation),(bed_length-frame_thick/2)];
+y_support_positions = [frame_thick/2,bed_y-frame_thick/2];
+bed_thick=15;
+
 
 assembly();
 
-$fn=60;
+$fn=18;
 
 module assembly()
 {
 
-translate([0,0,guide_rad+guide_padding])
-x_carriage();
-translate([0,0,guide_rad+guide_padding])
-x_guides();
+/*
+translate([0,0,guide_rad+guide_padding]) x_carriage();
+//translate([0,0,guide_rad+guide_padding]) x_guides();
 
-translate([30,0,guide_rad+guide_padding])
-spindle();
+translate([30,0,guide_rad+guide_padding]) spindle();
 
 translate([63,spindle_y,spindle_z])
 translate([0,0,guide_rad+guide_padding])
@@ -64,28 +78,82 @@ pulley3();
 translate([0,10,3*(guide_rad+guide_padding)]) y_carriage();
 
 translate([15,10,guide_rad+guide_padding]) lathe_tool();
+*/
 
-translate([61,0,guide_rad+guide_padding]) frame_upright();
-translate([40,0,guide_rad+guide_padding]) frame_upright();
-translate([-34,0,guide_rad+guide_padding]) frame_end();
 
-translate([0,50,10]) rotate([90,0,180]) control_wheel_2();
+//translate([0,50,10]) rotate([90,0,180]) control_wheel_2();
+//translate([-10,100,10]) rotate([90,0,0]) control_wheel_handle();
+//translate([-70,20,4]) rotate([-90,0,0]) x_drive_support();
+//translate([-70,50,4]) rotate([90,0,180]) control_wheel_2();
+//translate([-80,100,4]) rotate([90,0,0]) control_wheel_handle();
+//translate([-70,15,5]) rotate([90,0,0]) scale([1,1,1]) gear();
+//translate([-45,0,5]) rotate([0,-90,0]) scale([1,1,1]) gear();
 
-translate([-10,100,10]) rotate([90,0,0]) control_wheel_handle();
+translate([0,0,0]) scale([-1,1,1]) bed_support();
+translate([0,bed_y-frame_thick,0]) scale([-1,1,1]) bed_support();
 
-translate([-70,20,4]) rotate([-90,0,0]) x_drive_support();
-translate([-70,50,4]) rotate([90,0,180]) control_wheel_2();
-translate([-80,100,4]) rotate([90,0,0]) control_wheel_handle();
+translate([0,0,bed_thick]) frame_upright();
+translate([-x_support_positions[1]+frame_thick/2,0,bed_thick]) frame_upright();
+translate([-x_support_positions[2]+frame_thick/2,0,bed_thick]) frame_end();
 
-translate([-70,15,5]) rotate([90,0,0]) scale([1,1,1]) gear();
-translate([-45,0,5]) rotate([0,-90,0]) scale([1,1,1]) gear();
 
-translate([66,29,-20]) scale([-1,1,1]) bed_support();
-translate([66,-40,-20]) scale([-1,1,1]) bed_support();
+translate([61,33,5]) rotate([180,0,0]) screw_M4(10);
+
+// x lead screw (rotates to drive tool head along spindle axis)
+x_lead_z = bed_thick+frame_thick;
+translate([10,bed_y/2,x_lead_z]) threaded_rod(5,bed_length+25);
+translate([0,bed_y/2,x_lead_z]) rotate([0,90,0]) washer_M5(10);
+translate([1,bed_y/2,x_lead_z]) rotate([0,90,0]) nut_M5(10);
+translate([6,bed_y/2,x_lead_z]) rotate([0,90,0]) rotate([0,0,30]) nut_M5(10); // lock nut
+
+translate([-bed_length,bed_y/2,x_lead_z]) rotate([0,-90,0]) washer_M5(10);
+translate([-bed_length-1,bed_y/2,x_lead_z]) rotate([0,-90,0]) nut_M5(10);
+//translate([-bed_length-6, bed_y/2, x_lead_z]) rotate([0,-90,0]) scale([1,1,1]) gear();
+translate([-bed_length-8,bed_y/2,x_lead_z]) rotate([0,-90,0]) nut_M5(10);
+
+
+// x back support screwed rod (no rotation, just structural)
+x_support_z = bed_thick+frame_thick+20;
+translate([6,bed_y/2-x_guide_sep/2,x_support_z]) threaded_rod(5,bed_length+12);  // threaded rod
+
+for(xpos=[0,-bed_length+frame_thick]) // nuts and washers at both ends of screwed rod
+{
+	translate([xpos,0,0])
+	{
+		translate([0,bed_y/2-x_guide_sep/2,x_support_z]) rotate([0,90,0]) washer_M5(10);
+		translate([1,bed_y/2-x_guide_sep/2,x_support_z]) rotate([0,90,0]) nut_M5(10);
+		translate([-frame_thick,bed_y/2-x_guide_sep/2,x_support_z]) rotate([0,-90,0]) washer_M5(10);
+		translate([-frame_thick-1,bed_y/2-x_guide_sep/2,x_support_z]) rotate([0,-90,0]) rotate([0,0,30]) nut_M5(10);
+	}
+}
+
+// x slide guide rods
+x_guide_len = bed_length - frame_thick-frame_separation;
+color("lightgray") translate([-(frame_thick+frame_separation),0,x_lead_z]) rotate([0,-90,0])
+union()
+{
+	translate([0,bed_y/2-x_guide_sep/2,0]) cylinder(x_guide_len,guide_rad,guide_rad,false);
+	translate([0,bed_y/2+x_guide_sep/2,0]) cylinder(x_guide_len,guide_rad,guide_rad,false);
+}
+
+translate([-bed_length/2,bed_y/2,x_lead_z]) x_carriage();
+// y slide guide rods
+color("lightgray") translate([-(bed_length/2), bed_y/2-x_guide_sep/2 ,x_lead_z+2*(guide_rad+guide_padding)]) rotate([-90,0,0])
+union()
+{
+	translate([-y_guide_sep/2,0,0]) cylinder(y_car_depth,guide_rad,guide_rad,false);
+	translate([y_guide_sep/2,0,0]) cylinder(y_car_depth,guide_rad,guide_rad,false);
+}
+
+translate([-bed_length/2,bed_y/2+10,x_lead_z+2*(guide_rad+guide_padding)]) y_carriage();
+
+
+
 
 translate([46,spindle_y,spindle_z+6]) rotate([0,90,0]) collet();
 
 }
+
 
 xs_len=20;
 xs_height=25;
@@ -132,42 +200,43 @@ module x_drive_support ()
 		}
 }
 
+
+module threaded_rod(msize,length)
+{
+	rotate([0,-90,0]) 
+	color("darkgrey")
+		cylinder(length,msize/2,msize/2,false);
+}
+
+
+
 cutout_rad=10;
 module bed_support ()
 {
+	color("royalblue")
 	difference()
 	{
 		union()
 		{
-			cube([105,10,15],false);
-			translate([10,0,15])
-			cube([11,10,1],false);
-			translate([31,0,15])
-			cube([5,10,1],false);
-			translate([105-15,0,15])
-			cube([5,10,1],false);
+			cube([bed_length,frame_thick,bed_thick+2],false);
 		}
 		
-		translate([46,0,15])
-		rotate([-90,0,0])
-		translate([0,0,-1])
-		cylinder(12,cutout_rad,cutout_rad,false);
-		translate([105-15-cutout_rad,0,15])
-		rotate([-90,0,0])
-		translate([0,0,-1])
-		cylinder(12,cutout_rad,cutout_rad,false);
-
-			translate([36+cutout_rad,-1,15-cutout_rad])
-			cube([105-15-36-2*cutout_rad,12,cutout_rad+1],false);
-		
-		translate([5,5,-1])
-		cylinder(17,2,2,false);
-		translate([5+10+11,5,-1])
-		cylinder(17,2,2,false);
-		translate([100,5,-1])
-		cylinder(17,2,2,false);
-
+		translate([0,0,2])
+		hull()
+		{
+			translate([3*frame_thick+frame_separation+cutout_rad,-1,bed_thick]) rotate([-90,0,0]) cylinder(12,cutout_rad,cutout_rad,false);
+			translate([bed_length-2*frame_thick-cutout_rad,-1,bed_thick]) rotate([-90,0,0]) cylinder(12,cutout_rad,cutout_rad,false);
 		}
+
+		for (i=[0,1,2])
+		{
+			echo(x_support_positions[i]);
+			// Vertical support mounting slots
+			translate([x_support_positions[i],frame_thick/2,bed_thick+1.5]) cube([frame_thick+2*squeezage,frame_thick+2,3],true);
+			// Mounting holes
+			translate([x_support_positions[i],frame_thick/2,-1]) cylinder(bed_thick+5,2,2,false);
+		}
+	}
 }
 
 module collet_small()
@@ -445,6 +514,7 @@ module strut(x1,y1,x2,y2,width,thickness)
 module frame_upright()
 {
 	$fn=24;
+	translate([-frame_thick/2,bed_y/2,frame_thick])
 	difference()
 	{
 		union()
@@ -487,6 +557,7 @@ module frame_upright()
 module frame_end()
 {
 	$fn=30;
+	translate([-frame_thick/2,bed_y/2,frame_thick])
 	difference()
 	{
 		union()
